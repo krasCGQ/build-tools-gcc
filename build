@@ -128,6 +128,8 @@ function format_time() {
 
 # Date checking for GMP daily snapshot download
 function check_date() {
+    local GAP
+
     [[ $(TZ=Europe/Berlin date +%Z) == CEST ]] && \
         GAP=15600 || \
         GAP=19200
