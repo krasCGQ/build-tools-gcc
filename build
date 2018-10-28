@@ -358,7 +358,7 @@ function build_binaries() {
     fi
 
     if [[ ! -f $(dirname "${PREBUILTS_BIN}")/lib/liblz.a ]]; then
-        LZLIB=lzlib-1.9
+        LZLIB=lzlib-1.10
         (
             cd sources || die "Failed to create sources directory!"
             [[ ! -f ${LZLIB}.tar.gz ]] && wget https://download.savannah.gnu.org/releases/lzip/lzlib/${LZLIB}.tar.gz
@@ -373,7 +373,7 @@ function build_binaries() {
     fi
 
     if [[ ! -f ${PREBUILTS_BIN}/plzip ]]; then
-        PLZIP=plzip-1.7
+        PLZIP=plzip-1.8-pre1
         (
             cd sources || die "Failed to create sources directory!"
             [[ ! -f ${PLZIP}.tar.gz ]] && wget https://download.savannah.gnu.org/releases/lzip/plzip/${PLZIP}.tar.gz
