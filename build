@@ -390,7 +390,7 @@ function download_sources() {
 
         if [[ ! -d gcc-${REPO} ]]; then
             header "DOWNLOADING GCC"
-            if [[ ${SOURCE} == "linaro" && ${VERSION} -le 8 ]]; then
+            if [[ ${SOURCE} == "linaro" && ${VERSION} -ge 8 ]]; then
                 # Fetch the so-called ARM toolchain from svn
                 svn co svn://gcc.gnu.org/svn/gcc/branches/${GCC} gcc-${REPO}
             else
