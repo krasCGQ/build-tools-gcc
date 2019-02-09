@@ -644,9 +644,9 @@ function setup_env() {
         ln -s -f "${ROOT}/${ISL_tar}" isl
         ln -s -f "${ROOT}/${MPC_tar}" mpc
     else
-        ln -s -f "${ROOT}/mpfr" mpfr
-        ln -s -f "${ROOT}/isl" isl
-        ln -s -f "${ROOT}/mpc" mpc
+        ln -s -f "${ROOT}/sources/mpfr" mpfr
+        ln -s -f "${ROOT}/sources/isl" isl
+        ln -s -f "${ROOT}/sources/mpc" mpc
     fi
 
     # GCC 4.9 (ARM/i686): error: ‘SIGSEGV' was not declared in this scope
