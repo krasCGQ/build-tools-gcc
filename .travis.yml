@@ -17,7 +17,7 @@ jobs:
       script: 
       - travis_wait 50 bash ./build -a arm -s linaro -v 8
       after_success:
-      - tar zcvf arm-linux-gnueabi.tar.gz arm-linux-gnueabi
+      - tar zcf arm-linux-gnueabi.tar.gz arm-linux-gnueabi
       deploy:
         provider: releases
         api_key:
@@ -31,7 +31,7 @@ jobs:
       script:
       - travis_wait 50 bash ./build -a arm64 -s linaro -v 8
       after_success:
-      - tar zcvf aarch64-linux-gnu.tar.gz aarch64-linux-gnu
+      - tar zcf aarch64-linux-gnu.tar.gz aarch64-linux-gnu
       deploy:
         provider: releases
         api_key:
