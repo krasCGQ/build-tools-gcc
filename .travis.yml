@@ -1,0 +1,34 @@
+language: c
+
+dist: xenial
+
+install:
+- sudo -E apt update
+- sudo -E apt -yq install flex bison ncurses-dev texinfo gcc gperf patch libtool automake g++ libncurses5-dev gawk subversion expat libexpat1-dev python-all-dev binutils-dev libgcc1:i386 bc libcloog-isl-dev libcap-dev autoconf libgmp-dev build-essential gcc-multilib g++-multilib pkg-config libmpc-dev libmpfr-dev autopoint gettext liblzma-dev libssl-dev libz-dev
+
+before_script:
+- unset CC
+- chmod +x build
+
+jobs:
+  include:
+    - stage: Build
+      script: 
+      - travis_wait 50 bash ./build -a arm -s linaro -v 8
+      - ls
+      - tar cfJ arm-linux-gnu.tar.xz arm-linux-gnu
+    - script: 
+      - travis_wait 50 bash ./build -a arm64 -s linaro -v 8
+      - ls
+      - tar cfJ aarch64-linux-gnu.tar.xz aarch64-linux-gnu
+    - stage: GitHub Release
+      deploy:
+        provider: releases
+        api_key:
+          secure: IE+e1bXTtsOLIcWid/GXklv5AkgLXBMi3P/6zcGVY/2CH6Au5DCL7iQFp/EWjZTNmOntiZXS8LHN4ddTDkIUtxWigrIMOCY8emxd2gBpOoB9R99QMRKHB5FsRzvJ1+dguM8BGq5vFzSZRiMg6O/EfYlTVS6OEBFB3xuHflFaEyTTOQTxGwslfN6qiaaSysleIQS/K+TAcqkbWMtsRbbazhmrAY76hOVuFBaHsl1hrO3LLEuDqEhaD/a8GrQxDb8NKxb+Q63dQbvVX/7NHbiYUgPWpCbcI+cMbWmagi2dXmlc7J1nvpAf3bNOgkhHD0Z1pKqq0k5kjOYsydzbwuC5ZI3TVDtS+HlBGCHIKCu220aQwWHP6BPMpu6t3VIcmZzaiH0TMsBubjeKBSmsX/Lwog3OMp9C6l9cKlg4e0/t5YVdTY7yy/AoiacaSQWuokXzhHqr3jdQw5iZ06BprJfll8xnHL3FtDNAYuRN7Fo77ATnm4MeZQja6BtoMS5T3edI3m4nyGwCxyxON9RMF8eOj/gefEjQOn+97Doc8/KYfa6ZDQLUYsyrY0gzY0zeHOIxOufO/s21dMQTf9Gg65uXBDNC2kX6AXbZeLSHCBG7W4P7CiDXeNJm6eYDmj5mETiCtc4C07koiHSV0LJU1rJ2uBwArtEAOk1MjslL2nrpWkw=
+        file: 
+        - "/home/travis/build/Hubedge/build-tools-gcc/arm-linux-gnu.tar.xz"
+        - "/home/travis/build/Hubedge/build-tools-gcc/aarch64-linux-gnu.tar.xz"
+        skip_cleanup: true
+        on:
+          tags: true
