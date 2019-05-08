@@ -147,7 +147,7 @@ function check_sudo() {
     echo "Checking if sudo is available, please enter your password if a prompt appears!"
     if ! sudo -v 2>/dev/null; then
         warn "Sudo is not available! Disabling the option for tmpfs..." -n
-        NO_TMPFS=true
+        unset TMPFS
     fi
 }
 
@@ -397,8 +397,8 @@ function build_binaries() {
             (
                 cd "${LZLIB}" || die "Issue with extracting lzlib source!"
                 ./configure --prefix="$(dirname "${PREBUILTS_BIN}")"
-                make ${JOBS} || die "Error building lzlib!"
-                make install ${JOBS} || die "Error installing lzlib!"
+                make "${JOBS}" || die "Error building lzlib!"
+                make install "${JOBS}" || die "Error installing lzlib!"
             )
         )
     fi
@@ -412,8 +412,8 @@ function build_binaries() {
             (
                 cd ${PLZIP} || die "Issue with extracting plzip source!"
                 ./configure --prefix="$(dirname "${PREBUILTS_BIN}")" CXXFLAGS="-Wall -W -O2 -I$(dirname "${PREBUILTS_BIN}")/include -L$(dirname "${PREBUILTS_BIN}")/lib"
-                make ${JOBS} || die "Error building plzip!"
-                make install ${JOBS} || die "Error installing plzip!"
+                make "${JOBS}" || die "Error building plzip!"
+                make install "${JOBS}" || die "Error installing plzip!"
             )
         )
     fi
