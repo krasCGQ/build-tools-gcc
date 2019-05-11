@@ -320,6 +320,9 @@ function clean_up() { #FIXME: we dont need to remove everything everytime.
     unmount_tmpfs
     git clean -fxdq -e sources -e prebuilts
     find . -maxdepth 1 -type l -exec rm -rf {} \; #FIXME
+    for OLD_GMP in sources/gmp-6.1.99-*; do
+        [[ $(basename "${OLD_GMP}") != "${GMP}.tar.lz" ]] && rm -f "${OLD_GMP}"
+    done
     if [[ -d binutils ]] ||
        [[ -d build-binutils ]] ||
        [[ -d build-gcc ]] ||
