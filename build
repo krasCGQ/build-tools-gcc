@@ -406,8 +406,7 @@ function download_sources() {
 
         if [[ ! -d isl ]]; then
             header "DOWNLOADING ISL"
-            # don't use git_clone
-            git clone git://repo.or.cz/isl.git
+            git_clone git://repo.or.cz/isl.git -b ${ISL}
         fi
 
         if [[ ! -d gcc ]]; then
@@ -491,8 +490,9 @@ function update_repos() {
         header "UPDATING SOURCES"
         (
             cd isl || die "ISL did not get cloned properly!"
-            git remote update
+            git_fetch origin ${ISL}
             git checkout -f ${ISL}
+            git reset --hard ${ISL}
             ./autogen.sh
         )
         (
@@ -500,12 +500,14 @@ function update_repos() {
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${BINUTILS_git} || BRANCH=FETCH_HEAD
             git_fetch origin ${BINUTILS_git}
             git checkout -f ${BINUTILS_git} || git checkout -f -b ${BINUTILS_git} ${BRANCH}
+            git reset --hard ${BRANCH}
         )
         (
             cd gcc || die "GCC did not get cloned properly!"
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${GCC} || BRANCH=FETCH_HEAD
             git_fetch origin ${GCC}
             git checkout -f ${GCC} || git checkout -f -b ${GCC} ${BRANCH}
+            git reset --hard ${BRANCH}
         )
     else
         if [[ -d isl ]]; then
