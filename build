@@ -187,6 +187,7 @@ function setup_variables() {
                     "CFLAGS=-g0 -O2 -fstack-protector-strong"
                     "CXXFLAGS=-g0 -O2 -fstack-protector-strong" )
     JOBS="-j$(($(nproc --all) + 1))"
+    DEPTH_FLAG=true
 
     # Binary versions
     BINUTILS_git="master"
@@ -217,13 +218,13 @@ function parse_parameters() {
             "-v"|"--version") shift && VERSION=${1} ;;
 
             # OPTIONAL FLAGS
-            "-f"|"--full-src") FULL_SOURCE=true ;;
+            "-f"|"--full-src") DEPTH_FLAG=false ;;
+            "-j"|"--jobs") shift && JOBS=-j${1} ;;
             "-nu"|"--no-update") NO_UPDATE=true ;;
             "-p"|"--package") shift && COMPRESSION=${1} ;;
             "-tm"|"--tmpfs") TMPFS=true ;;
             "-tr"|"--tarballs") TARBALLS=true ;;
             "-V"|"--verbose") VERBOSE=true ;;
-            "-j"|"--jobs") shift && JOBS=-j${1} ;;
 
             # HELP!
             "-h"|"--help") help_menu; exit ;;
@@ -234,7 +235,6 @@ function parse_parameters() {
 
     [[ -n ${TMPFS} ]] && check_sudo
     [[ -z ${VERBOSE} ]] && exec 6>&2 5>&1 &>/dev/null
-    [[ -z ${FULL_SOURCE} ]] && DEPTH_FLAG=true
 
     # Default values
     case "${ARCH}" in
@@ -318,7 +318,7 @@ function clean_up() { #FIXME: we dont need to remove everything everytime.
     header "CLEANING UP"
 
     unmount_tmpfs
-    git clean -fxdq -e sources -e prebuilts
+    git clean -fxdq -e sources -e prebuilts -e patches
     find . -maxdepth 1 -type l -exec rm -rf {} \; #FIXME
     for OLD_GMP in sources/gmp-6.1.99-*; do
         [[ $(basename "${OLD_GMP}") != "${GMP}.tar.lz" ]] && rm -f "${OLD_GMP}"
@@ -384,7 +384,7 @@ function build_binaries() {
 
     if [[ ! -f ${PREBUILTS_BIN}/pxz ]]; then
         PXZ=${ROOT}/sources/pxz
-        [[ ! -d ${PXZ} ]] && git -C "$(dirname "${PXZ}")" clone --depth=1 https://github.com/jnovy/pxz
+        [[ ! -d ${PXZ} ]] && git -C "$(dirname "${PXZ}")" clone --depth=1 https://github.com/krasCGQ/pxz
         git -C "${PXZ}" clean -fxdq
         git -C "${PXZ}" pull
         make -C "${PXZ}" "${JOBS}" pxz || die "Error building pxz!"
@@ -459,7 +459,8 @@ function download_sources() {
 
         if [[ ! -d isl ]]; then
             header "DOWNLOADING ISL"
-            git_clone git://repo.or.cz/isl.git -b ${ISL_git}
+            # don't use git_clone
+            git clone git://repo.or.cz/isl.git
         fi
 
         if [[ ! -d gcc ]]; then
@@ -580,26 +581,21 @@ function update_repos() {
         )
         (
             cd isl || die "ISL did not get cloned properly!"
-            [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${ISL_git} || BRANCH=FETCH_HEAD
-            git_fetch origin ${ISL_git}
-            git checkout ${ISL_git} || git checkout -b ${ISL_git} ${BRANCH}
-            git reset --hard ${BRANCH}
+            git remote update
+            git checkout -f ${ISL_git}
             ./autogen.sh
         )
         (
             cd binutils || die "binutils did not get cloned properly!"
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${BINUTILS_git} || BRANCH=FETCH_HEAD
             git_fetch origin ${BINUTILS_git}
-            git checkout ${BINUTILS_git} || git checkout -b ${BINUTILS_git} ${BRANCH}
-            git reset --hard ${BRANCH}
+            git checkout -f ${BINUTILS_git} || git checkout -f -b ${BINUTILS_git} ${BRANCH}
         )
         (
             cd gcc || die "GCC did not get cloned properly!"
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${GCC} || BRANCH=FETCH_HEAD
             git_fetch origin ${GCC}
-            git reset --hard
-            git checkout ${GCC} || git checkout -b ${GCC} ${BRANCH}
-            git reset --hard ${BRANCH}
+            git checkout -f ${GCC} || git checkout -f -b ${GCC} ${BRANCH}
         )
     else
         if [[ -d mpfr ]]; then
@@ -628,6 +624,30 @@ function update_repos() {
     [[ ! -d binutils ]] && ln -s sources/binutils binutils
     [[ ! -d gcc ]] && ln -s sources/gcc gcc
     [[ ! -d glibc ]] && ln -s sources/glibc glibc
+}
+
+
+# Fetch required GCC patches
+function fetch_patches() {
+    mkdir -p patches
+    cd patches || die "Failed to create patches directory!"
+
+    if [[ ${VERSION} -eq 4 ]]; then
+        # GCC 4.9 (ARM/i686): error: ‘SIGSEGV' was not declared in this scope
+        GCC_PATCH="942-asan-fix-missing-include-signal-h"
+        [[ ! -f ${GCC_PATCH}.patch ]] && curl -sLO https://raw.githubusercontent.com/buildroot/buildroot/master/package/gcc/4.9.4/${GCC_PATCH}.patch
+    elif [[ ${VERSION} -ge 6 ]]; then
+        if [[ ${VERSION} -le 8 ]]; then
+            # GCC 6-8 (i686): error: ‘PATH_MAX' undeclared here (not in a function)
+            GCC_PATCH="53faaf1da220f5e904a1e8c8b343e91121218f82"
+        else
+            # GNU GCC 9 (any): error: ‘PATH_MAX' was not declared on this scope
+            GCC_PATCH="55a6998c4d5ce0ccd20bb0572915c2c94c0dc138"
+        fi
+        [[ ! -f ${GCC_PATCH}.patch ]] && curl -sLO https://gist.githubusercontent.com/krasCGQ/9e859c91e2e7c1fe0ffe009f4edd1d22/raw/114f29c50c15db2bc4ca9c2de348ad0fb3055ad1/${GCC_PATCH}.patch
+    fi
+
+    cd ..
 }
 
 
@@ -660,12 +680,9 @@ function setup_env() {
         ln -s -f "${ROOT}/sources/mpc" mpc
     fi
 
-    # GCC 4.9 (ARM/i686): error: ‘SIGSEGV' was not declared in this scope
-    [[ ${VERSION} -eq 4 ]] && curl -s https://raw.githubusercontent.com/buildroot/buildroot/master/package/gcc/4.9.4/942-asan-fix-missing-include-signal-h.patch | patch -Np1
-    # GNU GCC 6-8 (i686): error: ‘PATH_MAX' undeclared here (not in a function)
-    [[ ${VERSION} -ge 6 && ${VERSION} -le 8 ]] && curl -s https://gist.githubusercontent.com/krasCGQ/9e859c91e2e7c1fe0ffe009f4edd1d22/raw/114f29c50c15db2bc4ca9c2de348ad0fb3055ad1/53faaf1da220f5e904a1e8c8b343e91121218f82.patch | patch -Np1
-    # GNU GCC 9 (any): error: ‘PATH_MAX' was not declared on this scope
-    [[ ${SOURCE} = "gnu" && ${VERSION} -eq 9 ]] && curl -s https://gist.githubusercontent.com/krasCGQ/9e859c91e2e7c1fe0ffe009f4edd1d22/raw/114f29c50c15db2bc4ca9c2de348ad0fb3055ad1/55a6998c4d5ce0ccd20bb0572915c2c94c0dc138.patch | patch -Np1
+    if [[ -n ${GCC_PATCH} ]]; then
+        patch -Np1 < "${ROOT}"/patches/${GCC_PATCH}.patch || die "Failed to patch GCC source!"
+    fi
     cd ..
 
     if [[ -z ${VERBOSE} ]]; then
@@ -815,6 +832,7 @@ build_binaries
 download_sources
 extract_sources
 update_repos
+fetch_patches
 setup_env
 build_binutils
 build_headers
