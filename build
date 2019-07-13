@@ -201,7 +201,7 @@ function setup_variables() {
     ISL_tar="isl-0.21"
     GLIBC_git="master"
     GLIBC_tar="glibc-2.29"
-    LINUX="5.1"
+    LINUX="5.2"
 
     # Start of script
     START=$(date +%s)
@@ -459,8 +459,7 @@ function download_sources() {
 
         if [[ ! -d isl ]]; then
             header "DOWNLOADING ISL"
-            # don't use git_clone
-            git clone git://repo.or.cz/isl.git
+            git_clone git://repo.or.cz/isl.git -b ${ISL_git}
         fi
 
         if [[ ! -d gcc ]]; then
@@ -581,8 +580,9 @@ function update_repos() {
         )
         (
             cd isl || die "ISL did not get cloned properly!"
-            git remote update
+            git_fetch origin ${ISL_git}
             git checkout -f ${ISL_git}
+            git reset --hard ${ISL_git}
             ./autogen.sh
         )
         (
@@ -590,12 +590,14 @@ function update_repos() {
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${BINUTILS_git} || BRANCH=FETCH_HEAD
             git_fetch origin ${BINUTILS_git}
             git checkout -f ${BINUTILS_git} || git checkout -f -b ${BINUTILS_git} ${BRANCH}
+            git reset --hard ${BRANCH}
         )
         (
             cd gcc || die "GCC did not get cloned properly!"
             [[ -n ${FULL_SOURCE} ]] && BRANCH=origin/${GCC} || BRANCH=FETCH_HEAD
             git_fetch origin ${GCC}
             git checkout -f ${GCC} || git checkout -f -b ${GCC} ${BRANCH}
+            git reset --hard ${BRANCH}
         )
     else
         if [[ -d mpfr ]]; then
