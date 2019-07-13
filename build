@@ -751,7 +751,8 @@ function build_glibc() {
                           --host=${TARGET} \
                           --target=${TARGET} \
                           --with-headers="${INSTALL}/${TARGET}/include" \
-                          "${CONFIGURATION[@]}" libc_cv_forced_unwind=yes
+                          "${CONFIGURATION[@]}" \
+                          libc_cv_forced_unwind=yes with_selinux=no
     make install-bootstrap-headers=yes install-headers "${JOBS}" || die "Error installing headers for glibc!" -n
     make csu/subdir_lib "${JOBS}" || die "Error while making subdir_lib for glibc!" -n
     install csu/crt1.o csu/crti.o csu/crtn.o "${INSTALL}/${TARGET}/lib"
