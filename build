@@ -47,9 +47,9 @@ function help_menu() {
     echo "${BOLD}EXAMPLE:${RST} ${0} -a x86_64 -s gnu -v 8"
     echo
     echo "${BOLD}REQUIRED PARAMETERS:${RST}"
-    echo "  -a  | --arch:        Possible values: arm, arm64, i686, or x86_64. This is the toolchain's target architecture."
+    echo "  -a  | --arch:        Possible values: arm, arm64, host, i686, or x86_64. This is the toolchain's target architecture. If host is specified, target the host instead."
     echo "  -s  | --source:      Possible values: gnu or linaro. This is the GCC source (GNU official vs. Linaro fork)."
-    echo "  -v  | --version:     Possible values: (4, 5, 6, 7, 8, 9*, and 10* [*GNU only]). This is the GCC version to build."
+    echo "  -v  | --version:     Possible values: (4, 5, 6, 7, 8, 9*, and 10* [*GNU only]). This is the GCC version to build. If host is specified in ARCH, only version that matches or newer than the distribution one is allowed."
     echo
     echo "${BOLD}OPTIONAL PARAMETERS:${RST}"
     echo "  -f  | --full-src:    Download full git repos instead of shallow clones"
@@ -240,6 +240,10 @@ function parse_parameters() {
     case "${ARCH}" in
         "arm") TARGET="arm-linux-gnueabi" ;;
         "arm64") TARGET="aarch64-linux-gnu" ;;
+        "host") [[ ${VERSION} -le $(gcc -dumpversion | cut -d '.' -f 1) ]] && die "Building toolchain older than distribution one is not supported on host target!"
+                ARCH="$(uname -m)"
+                TARGET="$(gcc -dumpmachine)"
+                FOR_HOST=true ;;
         "i686") TARGET="i686-linux-gnu" ;;
         "x86_64") [[ ${VERSION} -le 5 ]] && die "Will not build, Use newer version instead" -n
                   TARGET="x86_64-linux-gnu" ;;
@@ -753,7 +757,7 @@ function build_glibc() {
     install csu/crt1.o csu/crti.o csu/crtn.o "${INSTALL}/${TARGET}/lib"
     ${TARGET}-gcc -nostdlib -nostartfiles -shared -x c /dev/null -o "${INSTALL}/${TARGET}/lib/libc.so"
     touch "${INSTALL}/${TARGET}/include/gnu/stubs.h"
-    if [[ ${ARCH} = "x86_64" ]]; then
+    if [[ -n ${FOR_HOST} || ${ARCH} = "x86_64" ]]; then
         make "${JOBS}" || die "Error while building glibc for the host!" -n
         make install "${JOBS}" || die "Error while installing glibc for the host!" -n
     else
